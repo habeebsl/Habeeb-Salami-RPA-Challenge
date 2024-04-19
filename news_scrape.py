@@ -206,23 +206,22 @@ class NewsScraper:
             print("Permission Error: Be Sure to close the Excel file before running the program")
 
 
-
+@task
 def search_phrase():
     input = workitems.inputs.current
-    return input.payload.get("search_phrase")
 
-if __name__ == "__main__":
-    try:
-        scraper = NewsScraper(r"output/images")
-        scraper.scrape_data(search_phrase())
+    if __name__ == "__main__":
+        try:
+            scraper = NewsScraper(r"output/images")
+            scraper.scrape_data(input.payload.get("search_phrase"))
 
-    except TimeoutException:
-        print("Timeout Error: Make sure you have a stable internet connection")
+        except TimeoutException:
+            print("Timeout Error: Make sure you have a stable internet connection")
 
-    except WebDriverException as e:
-        if "net::ERR_INTERNET_DISCONNECTED" in str(e):
-            print("Internet Disconnected Error: Your internet connection is down.")
-        else:
-            print(f"WebDriverException: {str(e)}")
+        except WebDriverException as e:
+            if "net::ERR_INTERNET_DISCONNECTED" in str(e):
+                print("Internet Disconnected Error: Your internet connection is down.")
+            else:
+                print(f"WebDriverException: {str(e)}")
 
             
