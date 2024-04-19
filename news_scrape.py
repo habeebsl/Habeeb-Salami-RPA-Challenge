@@ -207,7 +207,6 @@ class NewsScraper:
 
 
 
-@task
 def search_phrase():
     input = workitems.inputs.current
     return input.payload.get("search_phrase")
