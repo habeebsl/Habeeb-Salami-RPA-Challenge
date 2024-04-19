@@ -22,8 +22,9 @@ import pandas as pd
 from robocorp import workitems
 from robocorp.tasks import task
 
-class NewsScraper:
 
+class NewsScraper:
+    
     def __init__(self, download_path):
         self.driver = self.setup_driver()
         self.download_path = download_path
@@ -135,7 +136,11 @@ class NewsScraper:
 
     def scrape_data(self, keyword):
         self.driver.get("https://www.latimes.com/")
-        
+        if os.path.exists(r"output/images"):
+            os.remove(r"output/images")
+            os.mkdir(r"output/images")
+        else:
+            os.mkdir(r"output/images")
         try:
             search_button = WebDriverWait(
                 self.driver, 10).until(EC.element_to_be_clickable(
@@ -206,10 +211,9 @@ def search_phrase():
     input = workitems.inputs.current
     return input.payload.get("search_phrase")
 
-
 if __name__ == "__main__":
     try:
-        scraper = NewsScraper(r"C:\Users\Habeeb\Desktop\images")
+        scraper = NewsScraper(r"output/images")
         scraper.scrape_data(search_phrase())
 
     except TimeoutException:
@@ -220,3 +224,5 @@ if __name__ == "__main__":
             print("Internet Disconnected Error: Your internet connection is down.")
         else:
             print(f"WebDriverException: {str(e)}")
+
+            
