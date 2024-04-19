@@ -19,6 +19,8 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException,
 from bs4 import BeautifulSoup
 import pandas as pd
 
+from robocorp import workitems
+from robocorp.tasks import task
 
 class NewsScraper:
 
@@ -199,10 +201,16 @@ class NewsScraper:
 
 
 
+@task
+def search_phrase():
+    input = workitems.inputs.current
+    return input.payload.get("search_phrase")
+
+
 if __name__ == "__main__":
     try:
         scraper = NewsScraper(r"C:\Users\Habeeb\Desktop\images")
-        scraper.scrape_data("food")
+        scraper.scrape_data(search_phrase())
 
     except TimeoutException:
         print("Timeout Error: Make sure you have a stable internet connection")
