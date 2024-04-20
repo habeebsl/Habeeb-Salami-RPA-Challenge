@@ -101,7 +101,6 @@ class NewsScraper:
             time_convert = datetime.fromtimestamp(int(timestamp_obj)/1000)
             days_limit = datetime.now()-time_convert
             if days_limit.days < 5:
-                print("running")
                 iterary = []
                 equivalent_title = select_title[i]
                 title_text = equivalent_title.get_text(strip=True)
