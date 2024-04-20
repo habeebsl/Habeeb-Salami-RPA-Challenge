@@ -17,7 +17,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException, ElementClickInterceptedException
 
 from bs4 import BeautifulSoup
-import pandas as pd
+# import pandas as pd
 
 from robocorp import workitems
 from robocorp.tasks import task
@@ -208,20 +208,26 @@ class NewsScraper:
 
 @task
 def search_phrase():
-    input = workitems.inputs.current
+    try:
+        input = workitems.inputs.current
+        return input.payload.get("search_phrase")
+    except:
+        input = workitems.inputs.current
+        input.payload = {"search_phrase": "food"}
+        return input.payload.get("search_phrase")
 
-    if __name__ == "__main__":
-        try:
-            scraper = NewsScraper(r"output/images")
-            scraper.scrape_data(input.payload.get("search_phrase"))
+if __name__ == "__main__":
+    try:
+        scraper = NewsScraper(r"output/images")
+        scraper.scrape_data(search_phrase())
 
-        except TimeoutException:
-            print("Timeout Error: Make sure you have a stable internet connection")
+    except TimeoutException:
+        print("Timeout Error: Make sure you have a stable internet connection")
 
-        except WebDriverException as e:
-            if "net::ERR_INTERNET_DISCONNECTED" in str(e):
-                print("Internet Disconnected Error: Your internet connection is down.")
-            else:
-                print(f"WebDriverException: {str(e)}")
+    except WebDriverException as e:
+        if "net::ERR_INTERNET_DISCONNECTED" in str(e):
+            print("Internet Disconnected Error: Your internet connection is down.")
+        else:
+            print(f"WebDriverException: {str(e)}")
 
-            
+             
