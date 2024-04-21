@@ -260,7 +260,7 @@ def get_workitem_and_run_program():
     """
     try:
         input = workitems.inputs.current
-        return input.payload.get("search_phrase")
+        search_phrase = input.payload.get("search_phrase")
     except:
         input = workitems.inputs.current
         input.payload = {"search_phrase": "food"}
