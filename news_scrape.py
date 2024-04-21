@@ -89,7 +89,7 @@ class NewsScraper:
         else:
             return False
 
-    def random_slug(self):
+    def generate_random_slug(self):
         """
         Generate a random string to be used as image filenames.
 
@@ -112,7 +112,7 @@ class NewsScraper:
             generated_img_slug.append(str(numbers_and_letters[random_num]))
         return "".join(generated_img_slug)
 
-    def extractor(self, phrase):
+    def download_img_and_extract_news(self, phrase):
         """
         Extract data based on a search phrase from the LA Times website.
 
@@ -143,36 +143,34 @@ class NewsScraper:
             time_convert = datetime.fromtimestamp(int(timestamp_obj) / 1000)
             days_limit = datetime.now() - time_convert
             if days_limit.days < 5:
-                iterary = []
-                equivalent_title = select_title[i]
-                title_text = equivalent_title.get_text(strip=True)
-                iterary.append(title_text)
-                equivalent_description = select_description[i]
-                description_text = equivalent_description.get_text(strip=True)
-                iterary.append(description_text)
-                equivalent_time = select_time[i]
-                iterary.append(equivalent_time.get_text(strip=True))
-                equivalent_image = select_image_inner[i]
-                src_path = equivalent_image.get('src')
-                img_path = os.path.join(self.download_path, "images", f"{self.random_slug()}.jpg")
+                news_info = []
+                news_title = select_title[i].get_text(strip=True)
+                news_info.append(news_title)
+                news_description = select_description[i].get_text(strip=True)
+                news_info.append(news_description)
+                date_uploaded = select_time[i]
+                news_info.append(date_uploaded.get_text(strip=True))
+                news_image = select_image_inner[i]
+                src_path = news_image.get('src')
+                img_path = os.path.join(self.download_path, "images", f"{self.generate_random_slug()}.jpg")
 
                 http = HTTP()
                 http.download(url=src_path, target_file=img_path, overwrite=True)
 
-                iterary.append(img_path)
-                title_phrase_num = self.find_search_phrase(title_text, phrase)
-                iterary.append(title_phrase_num)
-                description_phrase_num = self.find_search_phrase(description_text, phrase)
-                iterary.append(description_phrase_num)
-                money_present = self.contains_money(title_text, description_text)
-                iterary.append(money_present)
-                data_list.append(iterary)
+                news_info.append(img_path)
+                title_phrase_num = self.find_search_phrase(news_title, phrase)
+                news_info.append(title_phrase_num)
+                description_phrase_num = self.find_search_phrase(news_description, phrase)
+                news_info.append(description_phrase_num)
+                money_present = self.contains_money(news_title, news_description)
+                news_info.append(money_present)
+                data_list.append(news_info)
             else:
                 return None
 
         return data_list
 
-    def scrape_data(self, keyword):
+    def create_excel_file(self, keyword):
         """
         Scrape news data based on a keyword from the LA Times website.
 
@@ -216,7 +214,7 @@ class NewsScraper:
 
             self.browser.select_from_list_by_value(date_dropdown, str(1))
 
-            extracted_data = self.extractor(keyword)
+            extracted_data = self.download_img_and_extract_news(keyword)
         except ElementNotFound:
             print(f"There are not any results that match {keyword}")
 
@@ -224,7 +222,7 @@ class NewsScraper:
             while True:
                 self.browser.click_element_when_clickable("class:search-results-module-next-page", timeout=10)
 
-                data = self.extractor(keyword)
+                data = self.download_img_and_extract_news(keyword)
                 if data is None:
                     print("done")
                     break
@@ -245,7 +243,7 @@ class NewsScraper:
 
         df.index = df.index + 1
         try:
-            df.to_excel(os.path.join(self.download_path, "news_scrape.xlsx"))
+            df.to_excel(os.path.join(self.download_path, "news_data.xlsx"))
         except PermissionError:
             print("Permission Error: Be Sure to close the Excel file before running the program")
 
@@ -264,7 +262,7 @@ def get_workitem_and_run_program():
         input.payload = {"search_phrase": "food"}
         search_phrase = input.payload.get("search_phrase")
     scraper = NewsScraper("output")
-    scraper.scrape_data(search_phrase)
+    scraper.create_excel_file(search_phrase)
  
 
 
