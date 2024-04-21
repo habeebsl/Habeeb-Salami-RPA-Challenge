@@ -5,23 +5,15 @@ import time
 from datetime import datetime
 import shutil
 
-import urllib.request
-import urllib.error
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import Select
-from selenium.common.exceptions import NoSuchElementException, TimeoutException, WebDriverException, ElementClickInterceptedException
-
 from bs4 import BeautifulSoup
 import pandas as pd
 
 from robocorp import workitems
 from robocorp.tasks import task
+from RPA.Browser.Selenium import Selenium
+from RPA.Browser.Selenium import ElementNotFound, ElementClickInterceptedException, BrowserNotFoundError
+from RPA.HTTP import HTTP
+from selenium.webdriver.common.keys import Keys
 
 
 class NewsScraper:
@@ -38,19 +30,18 @@ class NewsScraper:
         Args:
         - download_path (str): The path to the directory where images will be downloaded.
         """
-        self.driver = self.setup_driver()
+        self.browser = self.setup_browser()
         self.download_path = download_path
 
-    def setup_driver(self):
+    def setup_browser(self):
         """
-        Set up the WebDriver for Chrome.
+        Set up the Selenium browser.
 
         Returns:
-        - webdriver.Chrome: An instance of the Chrome WebDriver.
+        - Selenium: An instance of the Selenium browser object.
         """
-        chrome_options = Options()
-        chrome_options.add_argument("--disable-cache")
-        return webdriver.Chrome(options=chrome_options)
+        browser = Selenium()
+        return browser
 
     def find_search_phrase(self, text, phrase):
         """
@@ -134,9 +125,9 @@ class NewsScraper:
         - list: A list of extracted data containing news article information.
         """
         time.sleep(5)
-        self.driver.refresh()
-        get_new_elem = self.driver.find_element(By.CLASS_NAME, "search-results-module-results-menu")
-        needed_data = get_new_elem.get_attribute("outerHTML")
+        self.browser.reload_page()
+        get_new_elem = self.browser.find_element("class:search-results-module-results-menu")
+        needed_data = self.browser.get_element_attribute(get_new_elem, "outerHTML")
 
         soup = BeautifulSoup(needed_data, "html.parser")
         select_time = soup.find_all("p", class_="promo-timestamp")
@@ -165,14 +156,10 @@ class NewsScraper:
                 iterary.append(equivalent_time.get_text(strip=True))
                 equivalent_image = select_image_inner[i]
                 src_path = equivalent_image.get('src')
-                img_path = os.path.join(self.download_path, f"{self.random_slug()}.jpg")
+                img_path = os.path.join(self.download_path, "images", f"{self.random_slug()}.jpg")
 
-                try:
-                    urllib.request.urlretrieve(src_path, img_path)
-                except urllib.error.URLError as e:
-                    print(f"Error: URLError - {e.reason}")
-                except urllib.error.HTTPError as e:
-                    print(f"Error: HTTPError - {e.reason}")
+                http = HTTP()
+                http.download(url=src_path, target_file=img_path, overwrite=True)
 
                 iterary.append(img_path)
                 title_phrase_num = self.find_search_phrase(title_text, phrase)
@@ -197,7 +184,11 @@ class NewsScraper:
         Outputs:
         - Excel file: Saves extracted data to an Excel file.
         """
-        self.driver.get("https://www.latimes.com/")
+        try:
+            self.browser.open_available_browser("https://www.latimes.com/")
+        except BrowserNotFoundError:
+            print("Browser Error: The specified browser could not be found or is not supported.")
+
         output_dir = r"output/images"
         if os.path.exists(output_dir):
             shutil.rmtree(output_dir)
@@ -205,49 +196,42 @@ class NewsScraper:
         else:
             os.mkdir(output_dir)
         try:
-            search_button = WebDriverWait(
-                self.driver, 10).until(EC.element_to_be_clickable(
-                (By.CSS_SELECTOR, "body > ps-header > header > div.flex.\[\@media_print\]\:hidden > button"
-                )))
-            search_button.click()
+            self.browser.click_element_when_clickable("""
+                css:body > ps-header > 
+                header > div.flex.\[\@media_print\]\:hidden > 
+                button""", timeout=10
+                )
 
-            search_box = WebDriverWait(self.driver, 15).until(EC.presence_of_element_located((By.NAME, "q")))
-            search_box.send_keys(keyword)
-            search_box.send_keys(Keys.ENTER)
+            self.browser.wait_until_element_is_visible("name:q", timeout=10)
+            self.browser.input_text("name:q", keyword +Keys.ENTER)
 
-            date_dropdown = WebDriverWait(
-                self.driver, 10).until(EC.presence_of_element_located(
-                (By.CSS_SELECTOR,
-                 """body > div.page-content >
+            date_dropdown = """
+                css:body > div.page-content >
                 ps-search-results-module > form >
                 div.search-results-module-ajax >
                 ps-search-filters > div > main >
                 div.search-results-module-results-header >
                 div.search-results-module-sorts >
                 div > label > select
-                """)))
+                """
+            self.browser.wait_until_element_is_visible(date_dropdown, timeout=10)
 
-            select = Select(date_dropdown)
-            select.select_by_visible_text("Newest")
+            self.browser.select_from_list_by_value(date_dropdown, str(1))
 
             extracted_data = self.extractor(keyword)
-        except NoSuchElementException:
+        except ElementNotFound:
             print(f"There are not any results that match {keyword}")
+
         try:
             while True:
-                next_page = WebDriverWait(
-                    self.driver, 10).until(EC.element_to_be_clickable(
-                    (By.CLASS_NAME, "search-results-module-next-page"
-                     )))
+                self.browser.click_element_when_clickable("class:search-results-module-next-page", timeout=10)
 
-                next_page.click()
                 data = self.extractor(keyword)
                 if data is None:
                     print("done")
                     break
                 else:
                     extracted_data.extend(data)
-
         except ElementClickInterceptedException:
             print(f"Click Intercepted Error: Another element is intercepting the click action to the next page.")
 
@@ -269,7 +253,7 @@ class NewsScraper:
 
 
 @task
-def search_phrase():
+def get_workitem_and_run_program():
     """
     Get the search phrase from the Robocorp work item input.
     If no search phrase is provided, default to "food".
@@ -280,19 +264,11 @@ def search_phrase():
     except:
         input = workitems.inputs.current
         input.payload = {"search_phrase": "food"}
-        return input.payload.get("search_phrase")
+        search_phrase = input.payload.get("search_phrase")
+    scraper = NewsScraper("output")
+    scraper.scrape_data(search_phrase)
+ 
 
 
 if __name__ == "__main__":
-    try:
-        scraper = NewsScraper(r"output/images")
-        scraper.scrape_data(search_phrase())
-
-    except TimeoutException:
-        print("Timeout Error: Make sure you have a stable internet connection")
-
-    except WebDriverException as e:
-        if "net::ERR_INTERNET_DISCONNECTED" in str(e):
-            print("Internet Disconnected Error: Your internet connection is down.")
-        else:
-            print(f"WebDriverException: {str(e)}")
+    get_workitem_and_run_program()
