@@ -76,9 +76,7 @@ class NewsScraper:
         - bool: True if the money pattern is found, False otherwise.
         """
         possible_patterns = re.compile(
-            r"""(\$)(\d+)
-            \s?(\b\w+\b)
-            \s?(dollar|dollars|USD)?""",
+            r"""(\$)(\d+)\s?(\b\w+\b)\s?(dollar|dollars|USD)?""",
             re.IGNORECASE
         )
 
