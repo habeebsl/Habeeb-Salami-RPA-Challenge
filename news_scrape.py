@@ -3,7 +3,6 @@ import re
 import random
 import time
 from datetime import datetime
-import shutil
 
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -185,12 +184,6 @@ class NewsScraper:
         except BrowserNotFoundError:
             print("Browser Error: The specified browser could not be found or is not supported.")
 
-        output_dir = r"output/images"
-        if os.path.exists(output_dir):
-            shutil.rmtree(output_dir)
-            os.mkdir(output_dir)
-        else:
-            os.mkdir(output_dir)
         try:
             self.browser.click_element_when_clickable("""
                 css:body > ps-header > 
