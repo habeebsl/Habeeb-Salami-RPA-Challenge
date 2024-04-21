@@ -152,7 +152,7 @@ class NewsScraper:
                 news_info.append(date_uploaded.get_text(strip=True))
                 news_image = select_image_inner[i]
                 src_path = news_image.get('src')
-                img_path = os.path.join(self.download_path, "images", f"{self.generate_random_slug()}.jpg")
+                img_path = os.path.join(self.download_path, f"{self.generate_random_slug()}.jpg")
 
                 http = HTTP()
                 http.download(url=src_path, target_file=img_path, overwrite=True)
